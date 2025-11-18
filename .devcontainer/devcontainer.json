@@ -1,0 +1,23 @@
+{
+  "name": "Python, Spark & PostgreSQL Environment",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.pylintEnabled": true,
+        "python.linting.enabled": true
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-azuretools.vscode-docker",
+        "cweijan.vscode-postgresql-client2"
+      ]
+    }
+  },
+  // Encaminha as portas do MinIO (9000, 9001) e do Postgres (5432)
+  "forwardPorts": [9000, 9001, 5432],
+  "remoteUser": "vscode"
+}
