@@ -1,5 +1,6 @@
 import logging
 import sys
+from dotenv import load_dotenv
 from src.ingestion.ingest_bronze import run_ingestion
 
 def setup_logging():
@@ -13,6 +14,7 @@ def setup_logging():
     )
 
 if __name__ == "__main__":
+    load_dotenv()
     setup_logging()
     logger = logging.getLogger(__name__)
     
