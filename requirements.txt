@@ -1,0 +1,9 @@
+requests
+boto3
+pandas
+pyarrow
+tqdm
+pytest
+pytest-mock
+scikit-learn
+numpy
