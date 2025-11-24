@@ -1,108 +1,97 @@
-import pandas as pd
-import numpy as np
 import logging
 import sys
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import mean_absolute_error
-from src.modeling.feature_engineering import prepare_training_data
+from pyspark.ml import Pipeline
+from pyspark.ml.feature import StringIndexer, VectorAssembler
+from pyspark.ml.regression import RandomForestRegressor
+from pyspark.ml.evaluation import RegressionEvaluator
+from src.modeling.feature_engineering import prepare_training_data, get_spark_session
 
 # Configuração de Logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class F1Predictor:
+class F1PredictorSpark:
     def __init__(self):
-        self.model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
-        self.le_weather = LabelEncoder()
-        self.is_trained = False
-        self.driver_list = [] # Lista de pilotos conhecidos
+        self.spark = get_spark_session()
+        self.model = None
+        self.pipeline = None
+        self.driver_list = []
 
     def train(self):
-        df = prepare_training_data()
-        if df.empty:
+        logger.info("Preparando dados com Spark...")
+        df = prepare_training_data(self.spark)
+        
+        if df is None or df.rdd.isEmpty():
             logger.error("Sem dados para treinar.")
             return
 
-        # Preprocessing
-        # Codificar Clima: dry=0, rain=1 (ou via LabelEncoder)
-        df['weather_encoded'] = self.le_weather.fit_transform(df['weather_category'])
+        # Guardar lista de pilotos para predição
+        self.driver_list = [row['driver_number'] for row in df.select('driver_number').distinct().collect()]
+
+        # Pipeline MLlib
+        # 1. Indexar string 'weather_category' -> numero
+        indexer = StringIndexer(inputCol="weather_category", outputCol="weather_index", handleInvalid="keep")
         
-        # Features e Target
-        # Usamos meeting_key como proxy para a Pista. 
-        # Idealmente teríamos 'circuit_key', mas meeting_key varia por ano.
-        # Para simplificar este MVP, vamos assumir que o usuário insere o meeting_key de referência 
-        # OU vamos treinar apenas com dados genéricos de piloto/clima (o que seria ruim).
-        # MELHOR ABORDAGEM MVP: Usar meeting_key como categórico é perigoso se o ID mudar.
-        # Vamos tentar usar 'location' se tivéssemos, mas não temos fácil aqui.
-        # Vamos usar meeting_key mesmo, assumindo que o modelo aprende "pistas históricas".
+        # 2. Vetorizar Features
+        assembler = VectorAssembler(
+            inputCols=["meeting_key", "driver_number", "weather_index"],
+            outputCol="features"
+        )
         
-        X = df[['meeting_key', 'weather_encoded', 'driver_number']]
-        y = df['lap_duration']
+        # 3. Modelo Random Forest
+        rf = RandomForestRegressor(featuresCol="features", labelCol="lap_duration", numTrees=50)
         
-        self.driver_list = df['driver_number'].unique().tolist()
+        self.pipeline = Pipeline(stages=[indexer, assembler, rf])
         
-        logger.info("Treinando modelo (Random Forest)...")
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        # Split
+        train_data, test_data = df.randomSplit([0.8, 0.2], seed=42)
         
-        self.model.fit(X_train, y_train)
-        self.is_trained = True
+        logger.info("Treinando modelo...")
+        self.model = self.pipeline.fit(train_data)
         
         # Avaliação
-        predictions = self.model.predict(X_test)
-        mae = mean_absolute_error(y_test, predictions)
-        logger.info(f"Modelo treinado. MAE (Erro Médio Absoluto): {mae:.3f} segundos")
+        predictions = self.model.transform(test_data)
+        evaluator = RegressionEvaluator(labelCol="lap_duration", predictionCol="prediction", metricName="mae")
+        mae = evaluator.evaluate(predictions)
+        logger.info(f"Modelo treinado. MAE: {mae:.3f}")
 
     def predict_grid(self, meeting_key, weather_category):
-        if not self.is_trained:
-            logger.warning("Modelo não treinado. Treinando agora...")
-            self.train()
-            if not self.is_trained:
-                return None
-
-        try:
-            weather_encoded = self.le_weather.transform([weather_category])[0]
-        except ValueError:
-            logger.error(f"Clima '{weather_category}' desconhecido. Use: {self.le_weather.classes_}")
+        if not self.model:
+            logger.warning("Modelo não treinado.")
             return None
 
-        # Gerar previsões para todos os pilotos conhecidos
-        # Criar DataFrame de input
+        # Criar DataFrame de input para todos os pilotos
         input_data = []
         for driver in self.driver_list:
-            input_data.append({
-                'meeting_key': meeting_key,
-                'weather_encoded': weather_encoded,
-                'driver_number': driver
+            input_data.append((int(meeting_key), int(driver), weather_category))
+            
+        df_pred = self.spark.createDataFrame(input_data, ["meeting_key", "driver_number", "weather_category"])
+        
+        # Prever
+        predictions = self.model.transform(df_pred)
+        
+        # Coletar resultados e ordenar (Spark -> Python List -> Pandas/Print)
+        results = predictions.select("driver_number", "prediction").orderBy("prediction").collect()
+        
+        # Formatar output
+        grid = []
+        for i, row in enumerate(results):
+            grid.append({
+                "position": i + 1,
+                "driver_number": row["driver_number"],
+                "predicted_time": row["prediction"]
             })
-        
-        X_pred = pd.DataFrame(input_data)
-        
-        # Prever tempos
-        predicted_times = self.model.predict(X_pred)
-        
-        # Montar Grid
-        grid = pd.DataFrame({
-            'driver_number': self.driver_list,
-            'predicted_lap_time': predicted_times
-        })
-        
-        # Ordenar por tempo (menor é melhor)
-        grid = grid.sort_values('predicted_lap_time').reset_index(drop=True)
-        grid['position'] = grid.index + 1
-        
+            
         return grid
 
 def interactive_mode():
-    predictor = F1Predictor()
+    predictor = F1PredictorSpark()
     predictor.train()
     
-    if not predictor.is_trained:
+    if not predictor.model:
         return
 
-    print("\n--- Pitwall Preditivo F1 ---")
-    print("Dica: Use meeting_key=1208 (Interlagos 2023) ou procure chaves na API.")
+    print("\n--- Pitwall Preditivo F1 (Spark Engine) ---")
     
     while True:
         try:
@@ -111,23 +100,19 @@ def interactive_mode():
                 break
             
             meeting_key = int(meeting_input)
-            
             weather_input = input("Insira o Clima (dry/rain): ").lower()
-            if weather_input not in ['dry', 'rain']:
-                print("Clima inválido. Use 'dry' ou 'rain'.")
-                continue
-                
-            print(f"\nCalculando Grid para Meeting {meeting_key} com clima {weather_input}...")
+            
+            print(f"\nCalculando Grid...")
             grid = predictor.predict_grid(meeting_key, weather_input)
             
-            if grid is not None:
-                print("\n--- Grid de Largada Previsto ---")
-                print(grid[['position', 'driver_number', 'predicted_lap_time']].head(20).to_string(index=False))
-                
-        except ValueError:
-            print("Entrada inválida.")
-        except KeyboardInterrupt:
-            break
+            if grid:
+                print(f"{'Pos':<5} {'Driver':<10} {'Time':<10}")
+                print("-" * 30)
+                for row in grid[:20]:
+                    print(f"{row['position']:<5} {row['driver_number']:<10} {row['predicted_time']:.3f}")
+                    
+        except Exception as e:
+            print(f"Erro: {e}")
 
 if __name__ == "__main__":
     interactive_mode()
