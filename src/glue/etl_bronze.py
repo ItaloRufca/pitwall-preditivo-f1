@@ -36,7 +36,7 @@ if AWS_ACCESS_KEY != "INSIRA_SUA_ACCESS_KEY":
     sc._jsc.hadoopConfiguration().set("fs.s3.awsAccessKeyId", AWS_ACCESS_KEY)
     sc._jsc.hadoopConfiguration().set("fs.s3.awsSecretAccessKey", AWS_SECRET_KEY)
 
-BUCKET_NAME = args["handson-datalake-prd"]
+BUCKET_NAME = args['S3_BUCKET_NAME']
 BASE_URL = "https://api.openf1.org/v1"
 ENDPOINTS = ["drivers", "laps", "pit", "weather", "session_result", "stints"]
 
