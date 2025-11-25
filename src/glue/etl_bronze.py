@@ -48,7 +48,7 @@ def fetch_data(endpoint, params=None):
         url = f"{url}?{query_string}"
     
     try:
-        with urllib.request.urlopen(url) as response:
+        with urllib.request.urlopen(url, timeout=30) as response:
             if response.status == 200:
                 return json.loads(response.read().decode())
     except Exception as e:
@@ -56,7 +56,8 @@ def fetch_data(endpoint, params=None):
     return []
 
 def run_ingestion():
-    print(f"Iniciando ingestão Bronze (Spark) no bucket: {BUCKET_NAME}")
+    print(">>> INICIANDO SCRIPT GLUE - DEBUG <<<")
+    print(f"Bucket configurado: {BUCKET_NAME}")
     
     # Iterar anos (Isso roda no Driver, o que é ok para orquestração leve)
     # Para paralelismo massivo, poderíamos criar um RDD de anos/sessões, 
