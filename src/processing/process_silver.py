@@ -63,8 +63,8 @@ def process_silver():
         
         # Ler Bronze (assumindo CSV do ingestão anterior, ou JSON se mudarmos)
         # Ler Bronze
-        # Estrutura: bronze/{table}/year=*/meeting_key=*/session_key=*/...
-        input_path = f"{BRONZE_PATH}/{table}/*"
+        # Estrutura: bronze/{table}/year=*/meeting_key=*/session_key=*.csv
+        input_path = f"{BRONZE_PATH}/{table}/*/*/*.csv"
         
         try:
             # Ler CSV com header

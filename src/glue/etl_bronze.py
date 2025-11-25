@@ -3,12 +3,14 @@ import os
 import json
 import urllib.request
 import logging
+import boto3
+import csv
+from io import StringIO
 from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
-from pyspark.sql.types import StructType, StructField, StringType, DoubleType, IntegerType, BooleanType
 
 # Configuração de Logging
 logging.basicConfig(level=logging.INFO)
@@ -29,16 +31,38 @@ spark = glueContext.spark_session
 job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
-# Configurar Credenciais no Hadoop Conf (para S3A e S3)
-if AWS_ACCESS_KEY != "INSIRA_SUA_ACCESS_KEY":
-    sc._jsc.hadoopConfiguration().set("fs.s3a.access.key", AWS_ACCESS_KEY)
-    sc._jsc.hadoopConfiguration().set("fs.s3a.secret.key", AWS_SECRET_KEY)
-    sc._jsc.hadoopConfiguration().set("fs.s3.awsAccessKeyId", AWS_ACCESS_KEY)
-    sc._jsc.hadoopConfiguration().set("fs.s3.awsSecretAccessKey", AWS_SECRET_KEY)
-
 BUCKET_NAME = args['S3_BUCKET_NAME']
 BASE_URL = "https://api.openf1.org/v1"
 ENDPOINTS = ["drivers", "laps", "pit", "weather", "session_result", "stints"]
+
+def get_s3_client():
+    """Retorna cliente S3 com credenciais se fornecidas."""
+    if AWS_ACCESS_KEY != "INSIRA_SUA_ACCESS_KEY":
+        return boto3.client(
+            's3',
+            aws_access_key_id=AWS_ACCESS_KEY,
+            aws_secret_access_key=AWS_SECRET_KEY
+        )
+    return boto3.client('s3')
+
+def upload_to_s3(data_list, bucket, s3_key):
+    """Salva lista de dicts como CSV no S3."""
+    if not data_list:
+        return
+
+    csv_buffer = StringIO()
+    # Assumindo que todos os dicts tem as mesmas chaves do primeiro
+    fieldnames = data_list[0].keys()
+    writer = csv.DictWriter(csv_buffer, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(data_list)
+    
+    s3_client = get_s3_client()
+    try:
+        s3_client.put_object(Bucket=bucket, Key=s3_key, Body=csv_buffer.getvalue())
+        print(f"Salvo: s3://{bucket}/{s3_key}")
+    except Exception as e:
+        print(f"Erro S3: {e}")
 
 def fetch_data(endpoint, params=None):
     """Busca dados da API usando urllib (Standard Lib)."""
@@ -59,9 +83,6 @@ def run_ingestion():
     print(">>> INICIANDO SCRIPT GLUE - DEBUG <<<")
     print(f"Bucket configurado: {BUCKET_NAME}")
     
-    # Iterar anos (Isso roda no Driver, o que é ok para orquestração leve)
-    # Para paralelismo massivo, poderíamos criar um RDD de anos/sessões, 
-    # mas a API tem rate limits, então loop sequencial no driver é mais seguro.
     years = range(2020, 2026)
 
     for year in years:
@@ -86,29 +107,10 @@ def run_ingestion():
                 if not data:
                     continue
 
-                # Criar DataFrame Spark
-                # Spark infere schema, mas para JSON vazio ou complexo pode falhar.
-                # Como os dados vêm em memória (lista de dicts), createDataFrame funciona bem.
-                try:
-                    # RDD parallelize distribui os dados para os workers para escrita
-                    rdd = sc.parallelize(data)
-                    
-                    # Se a lista for vazia, o createDataFrame falha sem schema.
-                    if rdd.isEmpty():
-                        continue
-                        
-                    # Deixar o Spark inferir o schema dos dicts
-                    df = spark.read.json(rdd)
-                    
-                    # Caminho de saída
-                    # bronze/{dataset_name}/year=.../meeting_key=.../session_key=...
-                    output_path = f"s3://{BUCKET_NAME}/bronze/{dataset_name}/year={year}/meeting_key={meeting_key}/session_key={session_key}"
-                    
-                    # Escrever CSV (com header para facilitar leitura no Silver)
-                    df.write.mode("overwrite").option("header", "true").csv(output_path)
-                    
-                except Exception as e:
-                    print(f"Erro ao processar {dataset_name} na sessão {session_key}: {e}")
+                # Caminho de saída: bronze/{dataset}/year={year}/meeting_key={meeting}/session_key={session}.csv
+                s3_key = f"bronze/{dataset_name}/year={year}/meeting_key={meeting_key}/session_key={session_key}.csv"
+                
+                upload_to_s3(data, BUCKET_NAME, s3_key)
 
     job.commit()
 

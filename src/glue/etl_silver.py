@@ -64,8 +64,8 @@ for table in tables:
     print(f"Processando tabela: {table}")
     
     # Leitura do Bronze (CSV)
-    # Nova estrutura: bronze/{table}/year=*/meeting_key=*/session_key=*/part-*.csv
-    input_path = f"{BRONZE_PATH}/{table}/*"
+    # Nova estrutura: bronze/{table}/year=*/meeting_key=*/session_key=*.csv
+    input_path = f"{BRONZE_PATH}/{table}/*/*/*.csv"
     
     try:
         df = spark.read.option("header", "true").csv(input_path)

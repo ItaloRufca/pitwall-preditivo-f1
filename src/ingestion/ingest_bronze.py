@@ -83,9 +83,8 @@ def run_ingestion():
 
                 df = pd.DataFrame(data)
                 
-                # Caminho S3: bronze/year={YYYY}/meeting_key={KEY}/session_key={KEY}/dataset_name={NOME}/arquivo.csv
-                file_name = "arquivo.csv"
-                s3_key = f"bronze/{dataset_name}/year={year}/meeting_key={meeting_key}/session_key={session_key}/{file_name}"
+                # Caminho S3: bronze/{dataset_name}/year={YYYY}/meeting_key={KEY}/session_key={KEY}.csv
+                s3_key = f"bronze/{dataset_name}/year={year}/meeting_key={meeting_key}/session_key={session_key}.csv"
                 
                 upload_to_s3(df, bucket_name, s3_key)
 
