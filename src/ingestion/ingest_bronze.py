@@ -85,7 +85,7 @@ def run_ingestion():
                 
                 # Caminho S3: bronze/year={YYYY}/meeting_key={KEY}/session_key={KEY}/dataset_name={NOME}/arquivo.csv
                 file_name = "arquivo.csv"
-                s3_key = f"bronze/year={year}/meeting_key={meeting_key}/session_key={session_key}/dataset_name={dataset_name}/{file_name}"
+                s3_key = f"bronze/{dataset_name}/year={year}/meeting_key={meeting_key}/session_key={session_key}/{file_name}"
                 
                 upload_to_s3(df, bucket_name, s3_key)
 

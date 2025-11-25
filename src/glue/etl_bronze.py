@@ -101,9 +101,8 @@ def run_ingestion():
                     df = spark.read.json(rdd)
                     
                     # Caminho de saída
-                    # bronze/year=.../meeting_key=.../session_key=.../dataset_name=...
-                    # O Spark vai criar uma PASTA com arquivos part-*.csv dentro
-                    output_path = f"s3://{BUCKET_NAME}/bronze/year={year}/meeting_key={meeting_key}/session_key={session_key}/dataset_name={dataset_name}"
+                    # bronze/{dataset_name}/year=.../meeting_key=.../session_key=...
+                    output_path = f"s3://{BUCKET_NAME}/bronze/{dataset_name}/year={year}/meeting_key={meeting_key}/session_key={session_key}"
                     
                     # Escrever CSV (com header para facilitar leitura no Silver)
                     df.write.mode("overwrite").option("header", "true").csv(output_path)

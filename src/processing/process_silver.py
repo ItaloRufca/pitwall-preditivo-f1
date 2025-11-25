@@ -62,11 +62,9 @@ def process_silver():
         logger.info(f"Processando tabela: {table}")
         
         # Ler Bronze (assumindo CSV do ingestão anterior, ou JSON se mudarmos)
-        # O ingest_bronze.py original salva CSV. Vamos ler CSV.
-        # Estrutura: bronze/year=*/meeting_key=*/session_key=*/dataset_name=table/*.csv
-        # Spark consegue ler recursivamente com wildcards
-        
-        input_path = f"{BRONZE_PATH}/*/*/*/*dataset_name={table}/*.csv"
+        # Ler Bronze
+        # Estrutura: bronze/{table}/year=*/meeting_key=*/session_key=*/...
+        input_path = f"{BRONZE_PATH}/{table}/*"
         
         try:
             # Ler CSV com header

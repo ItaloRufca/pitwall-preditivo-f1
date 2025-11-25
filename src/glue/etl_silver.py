@@ -64,9 +64,8 @@ for table in tables:
     print(f"Processando tabela: {table}")
     
     # Leitura do Bronze (CSV)
-    # Nota: No Glue, podemos usar create_dynamic_frame.from_options ou spark.read direto.
-    # Usando spark.read para manter compatibilidade com o código anterior e facilidade com wildcards.
-    input_path = f"{BRONZE_PATH}/*/*/*/*dataset_name={table}"
+    # Nova estrutura: bronze/{table}/year=*/meeting_key=*/session_key=*/part-*.csv
+    input_path = f"{BRONZE_PATH}/{table}/*"
     
     try:
         df = spark.read.option("header", "true").csv(input_path)
