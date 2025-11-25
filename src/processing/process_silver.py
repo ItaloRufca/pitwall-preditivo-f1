@@ -30,14 +30,13 @@ def get_spark_session():
 
 def process_laps(df):
     """Processamento específico para a tabela laps."""
-    # Converter durações para double
-    numeric_cols = ['lap_duration', 'sector_1_duration', 'sector_2_duration', 'sector_3_duration']
+    numeric_cols = ['lap_duration', 'sector_1_duration', 'sector_2_duration', 'sector_3_duration', 'lap_number']
     for c in numeric_cols:
         if c in df.columns:
             df = df.withColumn(c, col(c).cast(DoubleType()))
     
-    # Remover nulos em lap_duration
     df = df.filter(col("lap_duration").isNotNull())
+    df = df.dropDuplicates(['session_key', 'driver_number', 'lap_number'])
     return df
 
 def process_weather(df):
@@ -49,14 +48,35 @@ def process_weather(df):
     for c in numeric_cols:
         if c in df.columns:
             df = df.withColumn(c, col(c).cast(DoubleType()))
+            
+    df = df.dropDuplicates(['session_key', 'date'])
     return df
 
-def process_silver():
+def process_drivers(df):
+    """Processamento específico para a tabela drivers."""
+    if 'driver_number' in df.columns:
+        df = df.withColumn('driver_number', col('driver_number').cast(IntegerType()))
+    
+    df = df.dropDuplicates(['session_key', 'driver_number'])
+    return df
+
+def process_pit(df):
+    """Processamento específico para a tabela pit."""
+    numeric_cols = ['lap_number', 'duration', 'pit_duration']
+    for c in numeric_cols:
+        if c in df.columns:
+            df = df.withColumn(c, col(c).cast(DoubleType()))
+            
+    df = df.dropDuplicates(['session_key', 'driver_number', 'lap_number'])
+    return df
+
+def run_silver_processing():
     spark = get_spark_session()
     logger.info("Spark Session criada.")
+    logger.info("Iniciando processamento Silver (Spark)...")
 
     # Tabelas de interesse
-    tables = ["laps", "weather", "session_result", "stints"]
+    tables = ["laps", "weather", "drivers", "pit", "session_result", "stints"]
 
     for table in tables:
         logger.info(f"Processando tabela: {table}")
@@ -79,12 +99,15 @@ def process_silver():
                 df = process_laps(df)
             elif table == "weather":
                 df = process_weather(df)
+            elif table == "drivers":
+                df = process_drivers(df)
+            elif table == "pit":
+                df = process_pit(df)
             
             # Adicionar coluna de partição 'year' se não existir (extrair do path é complexo no Spark read direto)
             # Mas o Spark read particionado (se a estrutura fosse hive-style perfeita) já traria.
             # Como nossa estrutura é customizada (dataset_name=...), o Spark pode não inferir o 'year' automaticamente como coluna
             # a menos que leiamos da raiz com basePath.
-            # Simplificação: Vamos ler e salvar. Se precisar de 'year', teríamos que extrair.
             # O ingestão salvou em year={YYYY}. Vamos tentar ler usando basePath para ganhar a coluna year.
             
             # Tentativa de leitura particionada

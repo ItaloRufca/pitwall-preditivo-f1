@@ -6,7 +6,7 @@ from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
 from pyspark.sql.functions import col, to_timestamp
-from pyspark.sql.types import DoubleType
+from pyspark.sql.types import DoubleType, IntegerType
 import os
 
 # 1. Inicialização do Glue
@@ -38,12 +38,15 @@ SILVER_PATH = f"s3://{BUCKET_NAME}/silver"
 
 def process_laps(df):
     """Processamento específico para a tabela laps."""
-    numeric_cols = ['lap_duration', 'sector_1_duration', 'sector_2_duration', 'sector_3_duration']
+    # Tipagem
+    numeric_cols = ['lap_duration', 'sector_1_duration', 'sector_2_duration', 'sector_3_duration', 'lap_number']
     for c in numeric_cols:
         if c in df.columns:
             df = df.withColumn(c, col(c).cast(DoubleType()))
     
+    # Limpeza
     df = df.filter(col("lap_duration").isNotNull())
+    df = df.dropDuplicates(['session_key', 'driver_number', 'lap_number'])
     return df
 
 def process_weather(df):
@@ -55,10 +58,30 @@ def process_weather(df):
     for c in numeric_cols:
         if c in df.columns:
             df = df.withColumn(c, col(c).cast(DoubleType()))
+            
+    df = df.dropDuplicates(['session_key', 'date'])
+    return df
+
+def process_drivers(df):
+    """Processamento específico para a tabela drivers."""
+    if 'driver_number' in df.columns:
+        df = df.withColumn('driver_number', col('driver_number').cast(IntegerType()))
+    
+    df = df.dropDuplicates(['session_key', 'driver_number'])
+    return df
+
+def process_pit(df):
+    """Processamento específico para a tabela pit."""
+    numeric_cols = ['lap_number', 'duration', 'pit_duration']
+    for c in numeric_cols:
+        if c in df.columns:
+            df = df.withColumn(c, col(c).cast(DoubleType()))
+            
+    df = df.dropDuplicates(['session_key', 'driver_number', 'lap_number'])
     return df
 
 # 2. Execução do ETL
-tables = ["laps", "weather", "session_result", "stints"]
+tables = ["laps", "weather", "drivers", "pit", "session_result", "stints"]
 
 for table in tables:
     print(f"Processando tabela: {table}")
@@ -79,6 +102,10 @@ for table in tables:
             df = process_laps(df)
         elif table == "weather":
             df = process_weather(df)
+        elif table == "drivers":
+            df = process_drivers(df)
+        elif table == "pit":
+            df = process_pit(df)
         
         # Escrita no Silver (Parquet)
         output_path = f"{SILVER_PATH}/{table}"

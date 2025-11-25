@@ -45,7 +45,7 @@ def run_ingestion():
     if not bucket_name:
         raise ValueError("A variável de ambiente S3_BUCKET_NAME não está definida.")
 
-    years = range(2020, 2026) # 2020 a 2025
+    years = range(2024, 2026) # 2024 a 2025
 
     for year in years:
         logger.info(f"Processando ano: {year}")
