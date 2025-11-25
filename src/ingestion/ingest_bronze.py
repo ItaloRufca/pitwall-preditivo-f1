@@ -32,7 +32,7 @@ def fetch_data(endpoint, params=None):
     """Busca dados da API OpenF1."""
     url = f"{BASE_URL}/{endpoint}"
     try:
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, timeout=30)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
