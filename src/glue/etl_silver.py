@@ -1,4 +1,5 @@
 import sys
+import os
 from awsglue.transforms import *
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
@@ -6,17 +7,32 @@ from awsglue.context import GlueContext
 from awsglue.job import Job
 from pyspark.sql.functions import col, to_timestamp
 from pyspark.sql.types import DoubleType
+import os
 
 # 1. Inicialização do Glue
 args = getResolvedOptions(sys.argv, ['JOB_NAME', 'S3_BUCKET_NAME'])
+
+# CREDENCIAIS AWS
+# Em produção, use IAM Roles ou variáveis de ambiente.
+# Se necessário hardcodar para testes, substitua abaixo.
+AWS_ACCESS_KEY = os.environ.get("AWS_ACCESS_KEY_ID", "INSIRA_SUA_ACCESS_KEY")
+AWS_SECRET_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "INSIRA_SUA_SECRET_KEY")
+
 sc = SparkContext()
 glueContext = GlueContext(sc)
 spark = glueContext.spark_session
 job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
+# Configurar Credenciais no Hadoop Conf (para S3A e S3)
+if AWS_ACCESS_KEY != "INSIRA_SUA_ACCESS_KEY":
+    sc._jsc.hadoopConfiguration().set("fs.s3a.access.key", AWS_ACCESS_KEY)
+    sc._jsc.hadoopConfiguration().set("fs.s3a.secret.key", AWS_SECRET_KEY)
+    sc._jsc.hadoopConfiguration().set("fs.s3.awsAccessKeyId", AWS_ACCESS_KEY)
+    sc._jsc.hadoopConfiguration().set("fs.s3.awsSecretAccessKey", AWS_SECRET_KEY)
+
 # Configurações
-BUCKET_NAME = args['S3_BUCKET_NAME']
+BUCKET_NAME = args["handson-datalake-prd"]
 BRONZE_PATH = f"s3://{BUCKET_NAME}/bronze"
 SILVER_PATH = f"s3://{BUCKET_NAME}/silver"
 
@@ -50,7 +66,7 @@ for table in tables:
     # Leitura do Bronze (CSV)
     # Nota: No Glue, podemos usar create_dynamic_frame.from_options ou spark.read direto.
     # Usando spark.read para manter compatibilidade com o código anterior e facilidade com wildcards.
-    input_path = f"{BRONZE_PATH}/*/*/*/*dataset_name={table}/*.csv"
+    input_path = f"{BRONZE_PATH}/*/*/*/*dataset_name={table}"
     
     try:
         df = spark.read.option("header", "true").csv(input_path)
