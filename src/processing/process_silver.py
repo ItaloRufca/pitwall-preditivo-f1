@@ -4,6 +4,16 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, to_timestamp, lit
 from pyspark.sql.types import DoubleType, IntegerType
 
+import sys
+from dotenv import load_dotenv
+
+# Carregar variáveis de ambiente
+load_dotenv()
+
+# Forçar o uso do Python do ambiente virtual para o Spark (Driver e Workers)
+os.environ['PYSPARK_PYTHON'] = sys.executable
+os.environ['PYSPARK_DRIVER_PYTHON'] = sys.executable
+
 # Configuração de Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,7 +34,10 @@ def get_spark_session():
         .appName("PitwallPreditivoF1-Silver") \
         .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
         .config("spark.hadoop.fs.s3a.aws.credentials.provider", "com.amazonaws.auth.EnvironmentVariableCredentialsProvider") \
-        .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.3.4") # Necessário para S3
+        .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.4.0") \
+        .config("spark.hadoop.fs.s3a.endpoint", "s3.us-east-1.amazonaws.com") \
+        .config("spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version", "2") \
+        .config("spark.hadoop.fs.s3a.fast.upload", "true")
     
     return builder.getOrCreate()
 
@@ -116,6 +129,9 @@ def run_silver_processing():
             
             output_path = f"{SILVER_PATH}/{table}"
             
+            count = df.count()
+            logger.info(f"Escrevendo {count} linhas em {output_path}")
+            
             df.write.mode("overwrite").parquet(output_path)
             logger.info(f"Salvo em {output_path}")
             
@@ -125,4 +141,4 @@ def run_silver_processing():
     spark.stop()
 
 if __name__ == "__main__":
-    process_silver()
+    run_silver_processing()
