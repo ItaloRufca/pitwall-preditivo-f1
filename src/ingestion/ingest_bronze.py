@@ -12,7 +12,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://api.openf1.org/v1"
-ENDPOINTS = ["drivers", "intervals", "laps", "location", "pit", "position", "race_control", "sessions", "stints", "weather", "session_result", "starting_grid"]
+ENDPOINTS = ["drivers", "intervals", "laps", "pit", "position", "race_control", "sessions", "stints", "weather", "session_result", "starting_grid"]
 
 # Limite de concorrência para evitar rate limits excessivos
 MAX_CONCURRENT_REQUESTS = 10

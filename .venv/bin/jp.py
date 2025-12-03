@@ -1,4 +1,4 @@
-#!/Users/italorufca/Desktop/Italo/Projetos/pitwall-preditivo-f1/.venv/bin/python3
+#!/Users/italorufca/Desktop/Italo/Projetos/pitwall-preditivo-f1/.venv/bin/python
 
 import sys
 import json

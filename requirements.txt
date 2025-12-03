@@ -5,3 +5,5 @@ numpy
 python-dotenv
 aiohttp
 aioboto3
+pandas
+pyarrow
