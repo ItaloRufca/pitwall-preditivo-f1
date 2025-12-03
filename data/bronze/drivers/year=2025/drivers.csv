@@ -1,0 +1,21 @@
+driver_number,name_acronym,full_name,team_name,engine,aero,consistency
+4,NOR,Lando Norris,McLaren,0.95,0.98,0.95
+81,PIA,Oscar Piastri,McLaren,0.95,0.98,0.92
+16,LEC,Charles Leclerc,Ferrari,0.98,0.96,0.94
+44,HAM,Lewis Hamilton,Ferrari,0.98,0.96,0.98
+1,VER,Max Verstappen,Red Bull Racing,0.94,0.99,0.99
+30,LAW,Liam Lawson,Red Bull Racing,0.94,0.99,0.88
+63,RUS,George Russell,Mercedes,0.96,0.95,0.93
+12,ANT,Kimi Antonelli,Mercedes,0.96,0.95,0.85
+14,ALO,Fernando Alonso,Aston Martin,0.92,0.9,0.97
+18,STR,Lance Stroll,Aston Martin,0.92,0.9,0.85
+55,SAI,Carlos Sainz,Williams,0.97,0.85,0.94
+23,ALB,Alexander Albon,Williams,0.97,0.85,0.91
+10,GAS,Pierre Gasly,Alpine,0.88,0.88,0.9
+7,DOO,Jack Doohan,Alpine,0.88,0.88,0.85
+31,OCO,Esteban Ocon,Haas,0.9,0.82,0.9
+87,BEA,Oliver Bearman,Haas,0.9,0.82,0.86
+22,TSU,Yuki Tsunoda,RB,0.89,0.86,0.89
+20,HAD,Isack Hadjar,RB,0.89,0.86,0.84
+27,HUL,Nico Hulkenberg,Kick Sauber,0.85,0.8,0.92
+5,BOR,Gabriel Bortoleto,Kick Sauber,0.85,0.8,0.87
