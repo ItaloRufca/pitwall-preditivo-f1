@@ -1,124 +1,113 @@
 # 🏎️ Pitwall Preditivo F1
 
-**Pitwall Preditivo F1** é um projeto de Engenharia de Dados e Machine Learning que consome dados da [OpenF1 API](https://openf1.org/), processa em um Data Lake (Bronze/Silver/Gold) e treina modelos preditivos para estimar tempos de volta e estratégias de corrida.
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-S3%20%7C%20Glue-orange?style=for-the-badge&logo=amazon-aws&logoColor=white)
+![Status](https://img.shields.io/badge/Status-Em%20Desenvolvimento-yellow?style=for-the-badge)
 
-O projeto foi desenhado para rodar tanto **localmente** (com PySpark) quanto na **AWS** (AWS Glue + S3).
-
----
-
-## 🏗️ Arquitetura
-
-O pipeline segue a arquitetura Medalhão:
-
-1.  **Bronze Layer (Ingestão)**:
-    *   Dados brutos da API (JSON) convertidos para CSV.
-    *   Estrutura: `s3://bucket/bronze/{tabela}/year={ano}/meeting_key={key}/session_key={key}.csv`
-    *   Tabelas: `drivers`, `laps`, `pit`, `weather`, `session_result`, `stints`.
-
-2.  **Silver Layer (Processamento)**:
-    *   Dados limpos, tipados e deduplicados.
-    *   Formato: **Parquet**.
-    *   Estrutura: `s3://bucket/silver/{tabela}/`
-
-3.  **Gold Layer (Modelagem)**:
-    *   Camada futura para tabelas agregadas e modelos de ML.
+Bem-vindo ao **Pitwall Preditivo F1**, um projeto de Engenharia de Dados e Machine Learning focado em prever resultados e estratégias na Fórmula 1. Este projeto implementa uma arquitetura de dados moderna (Medallion Architecture) na AWS para processar dados históricos e em tempo real da F1.
 
 ---
 
-## 🚀 Como Rodar Localmente
+## 🏗️ Arquitetura do Projeto
+
+O projeto segue a arquitetura **Medallion** (Bronze, Silver, Gold):
+
+1.  **🥉 Camada Bronze (Ingestion)**:
+    *   **Fonte**: [OpenF1 API](https://openf1.org/).
+    *   **Processo**: Script Python assíncrono (`asyncio`, `aiohttp`) que baixa dados de sessões, pilotos, voltas, clima, etc.
+    *   **Armazenamento**: Arquivos CSV brutos no Amazon S3.
+    *   **Destaques**: Deduplicação de arquivos e alta performance com concorrência controlada.
+
+2.  **🥈 Camada Silver (Processing)**:
+    *   **Fonte**: Arquivos CSV da Camada Bronze.
+    *   **Processo**: Limpeza, seleção de colunas e conversão de tipos.
+    *   **Armazenamento**: Arquivos **Parquet** otimizados no Amazon S3.
+    *   **Catalogação**: Integração automática com **AWS Glue Data Catalog** para criar/atualizar tabelas e schemas.
+
+3.  **🥇 Camada Gold (Analytics & ML)** *(Em Breve)*:
+    *   Feature Engineering e Modelagem Preditiva.
+
+---
+
+## 🚀 Como Começar
 
 ### Pré-requisitos
-*   Python 3.8+
-*   Java 8 ou 11 (para Spark)
-*   Conta AWS (opcional, se quiser salvar no S3)
 
-### 1. Instalação
-Clone o repositório e instale as dependências:
-```bash
-git clone https://github.com/ItaloRufca/pitwall-preditivo-f1.git
-cd pitwall-preditivo-f1
-pip install -r requirements.txt
-```
+*   Python 3.9+
+*   Conta AWS com permissões para S3 e Glue.
+*   AWS CLI configurado ou variáveis de ambiente.
 
-### 2. Configuração (.env)
-Crie um arquivo `.env` na raiz:
-```ini
-AWS_ACCESS_KEY_ID=sua_chave
-AWS_SECRET_ACCESS_KEY=sua_senha
-AWS_DEFAULT_REGION=us-east-1
-S3_BUCKET_NAME=seu-bucket-datalake
-```
+### Instalação
 
-### 3. Execução
-**Passo 1: Ingestão (Bronze)**
-Baixa dados da API e salva no S3 (ou local se configurar).
-```bash
-python -m src.main
-```
+1.  **Clone o repositório:**
+    ```bash
+    git clone https://github.com/ItaloRufca/pitwall-preditivo-f1.git
+    cd pitwall-preditivo-f1
+    ```
 
-**Passo 2: Processamento (Silver)**
-Lê do Bronze, limpa e salva em Parquet.
-```bash
-python src/processing/process_silver.py
-```
+2.  **Crie um ambiente virtual (opcional, mas recomendado):**
+    ```bash
+    python3 -m venv .venv
+    source .venv/bin/activate
+    ```
 
-**Passo 3: Modelagem (Gold)**
-Treina o modelo e permite predições interativas.
-```bash
-python src/modeling/predictor.py
-```
+3.  **Instale as dependências:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4.  **Configure as variáveis de ambiente:**
+    Crie um arquivo `.env` na raiz do projeto:
+    ```env
+    S3_BUCKET_NAME=seu-bucket-datalake
+    AWS_ACCESS_KEY_ID=sua-access-key
+    AWS_SECRET_ACCESS_KEY=sua-secret-key
+    AWS_REGION=us-east-1
+    ```
 
 ---
 
-## ☁️ Como Rodar na AWS (AWS Glue)
+## 🛠️ Execução
 
-O projeto possui scripts dedicados para rodar como **Spark Jobs** no AWS Glue.
+### 1. Ingestão (Bronze)
+Baixa os dados da API e salva como CSV no S3.
+```bash
+python3 src/ingestion/ingest_bronze.py
+```
 
-### Configuração Geral
-1.  Crie um bucket S3 (ex: `meu-datalake-f1`).
-2.  No console AWS Glue, vá em **ETL jobs**.
-
-### 1. Job Bronze (Ingestão)
-*   **Script**: Copie o conteúdo de `src/glue/etl_bronze.py`.
-*   **Tipo**: Spark Script Editor.
-*   **Parâmetros**: Adicione `--S3_BUCKET_NAME` com o nome do seu bucket.
-*   **Credenciais**: Edite o script para incluir suas chaves AWS (ou use IAM Role se configurado).
-*   **Execução**: Vai baixar os dados e salvar na pasta `bronze/`.
-
-### 2. Job Silver (Processamento)
-*   **Script**: Copie o conteúdo de `src/glue/etl_silver.py`.
-*   **Tipo**: Spark Script Editor.
-*   **Parâmetros**: `--S3_BUCKET_NAME`.
-*   **Execução**: Lê do Bronze, trata e salva em `silver/` (Parquet).
-
-### 3. Job Gold (Treinamento)
-*   **Em breve**: Scripts para treinamento de modelos.
+### 2. Processamento (Silver)
+Processa os CSVs, converte para Parquet e atualiza o AWS Glue Catalog.
+```bash
+python3 src/processing/process_silver.py
+```
 
 ---
 
 ## 📂 Estrutura do Projeto
 
-```
-src/
-├── glue/               # Scripts otimizados para AWS Glue
-│   ├── etl_bronze.py
-│   ├── etl_silver.py
-│   └── etl_gold.py
-├── ingestion/          # Scripts de ingestão local
-│   └── ingest_bronze.py
-├── processing/         # Scripts de processamento local
-│   └── process_silver.py
-├── modeling/           # Scripts de ML local
-│   ├── feature_engineering.py
-│   └── predictor.py
-└── main.py             # Entrypoint local
+```plaintext
+pitwall-preditivo-f1/
+├── data/                   # Dados locais (ignorado no git)
+├── scripts/                # Scripts utilitários
+├── src/
+│   ├── ingestion/
+│   │   └── ingest_bronze.py   # Script de ingestão (API -> Bronze)
+│   └── processing/
+│       └── process_silver.py  # Script de processamento (Bronze -> Silver + Glue)
+├── .env                    # Variáveis de ambiente (não comitar!)
+├── .gitignore
+├── README.md
+└── requirements.txt
 ```
 
 ---
 
-## 🛠️ Tecnologias
-*   **Linguagem**: Python
-*   **Processamento**: Apache Spark (PySpark)
-*   **Cloud**: AWS (S3, Glue)
-*   **ML**: Spark MLlib
-*   **Dados**: OpenF1 API
+## 🤝 Contribuição
+
+Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou enviar pull requests.
+
+---
+
+## 📝 Licença
+
+Este projeto está sob a licença MIT.
