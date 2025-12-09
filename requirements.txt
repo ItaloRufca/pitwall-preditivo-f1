@@ -7,3 +7,6 @@ aiohttp
 aioboto3
 pandas
 pyarrow
+matplotlib
+seaborn
+s3fs
