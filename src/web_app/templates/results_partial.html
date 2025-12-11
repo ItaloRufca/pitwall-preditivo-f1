@@ -1,0 +1,342 @@
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in-up">
+    <!-- Leaders List -->
+    <div class="lg:col-span-8 space-y-2">
+        <!-- Header with Sort Toggles -->
+        <div class="flex justify-between items-end mb-2 px-1">
+            <h3 class="text-lg font-bold flex items-center text-white tracking-widest uppercase italic">
+                <span class="text-red-600 mr-2">///</span> Classificação
+            </h3>
+
+            <div class="flex bg-black/50 rounded-lg p-0.5 border border-white/10 backdrop-blur-md">
+                <button onclick="sortList('grid')" id="btn-grid"
+                    class="px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white transition-all">Grid</button>
+                <button onclick="sortList('pred')" id="btn-pred"
+                    class="px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wider bg-white/10 text-white shadow-[0_0_10px_rgba(255,255,255,0.2)] transition-all">Previsão</button>
+            </div>
+        </div>
+
+        <!-- List Container -->
+        <div id="driver-list" class="space-y-2">
+            {% for driver in drivers %}
+            <div class="driver-item group relative overflow-hidden bg-gradient-to-r from-neutral-900 via-neutral-900 to-transparent border-l-4 hover:bg-neutral-800 transition-all duration-300 cursor-pointer clip-path-slant"
+                style="border-color: {{ driver.color }}; clip-path: polygon(0 0, 100% 0, 98% 100%, 0 100%);"
+                data-grid="{{ driver.start }}" data-pred="{{ driver.end }}"
+                onclick="showProfile('{{ driver.number }}')">
+
+                <div
+                    class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-shine">
+                </div>
+
+                <div class="p-3 flex items-center justify-between relative z-10">
+                    <div class="flex items-center gap-4 w-1/3">
+                        <span
+                            class="rank-display font-black text-2xl w-8 text-right italic text-white/20 group-hover:text-white/80 transition-colors">{{
+                            loop.index }}</span>
+
+                        <!-- Driver Number Badge -->
+                        <div class="flex items-center justify-center w-8 h-8 rounded-full border-2 font-bold text-[10px] shrink-0 bg-neutral-900"
+                            style="border-color: {{ driver.color }}; color: {{ driver.color }};">
+                            {{ driver.number }}
+                        </div>
+
+                        <div class="pl-2 border-l border-white/10">
+                            <div class="font-bold text-lg text-white leading-none uppercase italic tracking-tighter">{{
+                                driver.name }}</div>
+                            <div class="text-[0.6rem] text-gray-400 uppercase tracking-widest mt-0.5">{{ driver.team }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 flex justify-center items-center gap-12">
+                        <div class="text-center group/metric">
+                            <div class="text-[0.6rem] uppercase text-gray-600 tracking-widest mb-1">Grid</div>
+                            <div
+                                class="font-mono text-lg text-gray-400 group-hover/metric:text-white transition-colors">
+                                P{{ driver.start }}</div>
+                        </div>
+
+                        <!-- Arrow Indicator -->
+                        <div class="text-2xl font-black {{ driver.delta_class }} opacity-50">{{ driver.delta_str }}
+                        </div>
+
+                        <div class="text-center group/metric">
+                            <div class="text-[0.6rem] uppercase text-gray-600 tracking-widest mb-1">Final</div>
+                            <div
+                                class="font-mono text-2xl font-bold text-white group-hover/metric:scale-110 transition-transform">
+                                P{{ driver.end }}</div>
+                        </div>
+                    </div>
+
+                    <div class="w-16 text-right">
+                        <div
+                            class="font-mono font-bold text-sm {{ driver.delta_class }} bg-black/40 px-2 py-1 rounded inline-block">
+                            {{ driver.delta_str }}{{ driver.delta_val }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Hero Profile Column -->
+    <div class="lg:col-span-4 lg:sticky lg:top-4 h-fit">
+        <div id="profile-card" class="relative bg-black rounded-xl overflow-hidden shadow-2xl border border-neutral-800"
+            data-current-p="{{ winner.number }}">
+            <!-- New Compare Button (Top Right) -->
+            <div class="absolute top-4 right-4 z-50">
+                <button id="btn-compare-profile" hx-get="/compare/select" hx-target="#modal-container"
+                    hx-vals='js:{"current_driver": getCurrentDriver(), "meeting_key": "{{ meeting_key }}"}'
+                    class="w-10 h-10 rounded-full bg-white/10 hover:bg-red-600 hover:scale-110 backdrop-blur-md border border-white/20 flex items-center justify-center text-white transition-all shadow-lg group">
+                    <span class="text-xl font-bold pb-1 group-hover:rotate-90 transition-transform">+</span>
+                </button>
+            </div>
+            <!-- Team Color Glow -->
+            <div id="p-glow-bg" class="absolute top-0 inset-x-0 h-32 opacity-50 transition-colors duration-500"
+                style="background: linear-gradient(to bottom, {{ winner.color }}, transparent);">
+            </div>
+
+            <div class="relative pt-8 pb-6 px-6 flex flex-col items-center">
+                <!-- Driver Image Floating -->
+                <div class="relative w-48 h-48 -mb-4 z-10 drop-shadow-2xl filter saturate-110 contrast-125">
+                    <img id="p-img" src="{{ winner.img }}"
+                        class="w-full h-full object-cover object-top mask-image-gradient {{ 'hidden' if not winner.img else '' }}"
+                        onerror="this.classList.add('hidden'); document.getElementById('p-placeholder').classList.remove('hidden');">
+                    <div id="p-placeholder"
+                        class="w-full h-full flex items-center justify-center bg-neutral-800 rounded-full {{ 'hidden' if winner.img else '' }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-32 h-32 text-neutral-600" viewBox="0 0 20 20"
+                            fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Driver Name Large -->
+                <h2 id="p-name"
+                    class="text-3xl font-black text-center text-white italic tracking-tighter uppercase leading-none z-20 drop-shadow-md">
+                    {{ winner.name }}</h2>
+                <div class="w-full h-0.5 bg-gradient-to-r from-transparent via-white/20 to-transparent my-4"></div>
+
+                <p id="p-team" class="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 mb-6">{{ winner.team }}
+                </p>
+
+                <!-- Stats Bars -->
+                <div class="w-full space-y-4 px-2">
+                    <!-- Position Bar -->
+                    <div class="flex justify-between items-end text-xs uppercase text-gray-500 mb-1">
+                        <span>Ganho de Posição</span>
+                        <span id="p-delta-txt" class="font-bold"
+                            style="color: {{ winner.delta_class.split('-')[1] }}">{{ winner.delta_str }}{{
+                            winner.delta_val }}</span>
+                    </div>
+                    {% set delta = winner.start|int - winner.end|int %}
+                    {% set bar_w = (delta|abs * 10) if (delta|abs * 10) < 100 else 100 %} <div
+                        class="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
+                        <div id="bar-pos" class="h-full transition-all duration-1000"
+                            style="width: {{ bar_w }}%; background-color: {{ '#4ade80' if delta > 0 else '#f87171' if delta < 0 else '#555' }};">
+                        </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mt-6">
+                    <div class="bg-neutral-900 border border-white/5 p-3 rounded text-center">
+                        <div class="text-[0.6rem] uppercase text-gray-500 mb-1">Melhor Volta</div>
+                        <div id="p-best" class="font-mono text-sm text-yellow-500">{{ winner.best_lap }}</div>
+                    </div>
+                    <div class="bg-neutral-900 border border-white/5 p-3 rounded text-center">
+                        <div class="text-[0.6rem] uppercase text-gray-500 mb-1">Ritmo Médio</div>
+                        <div id="p-avg" class="font-mono text-sm text-blue-400">{{ winner.avg_lap }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Strip -->
+        <div id="p-strip" class="h-2 w-full transition-colors duration-500"
+            style="background-color: {{ winner.color }}"></div>
+    </div>
+
+    <!-- Track Intel Card (Refined) -->
+    <div class="mt-6 bg-neutral-900 rounded-xl overflow-hidden shadow-2xl border border-neutral-800">
+        <div class="px-6 py-4 border-b border-neutral-800 flex justify-between items-center bg-black/40">
+            <h3 class="text-white font-bold uppercase tracking-wider text-sm flex items-center gap-2">
+                <span class="text-blue-500">🧬</span> Circuit DNA
+            </h3>
+            <span class="text-xs text-gray-500 uppercase">{{ circuit.name }}</span>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <!-- Tech Bars for DNA -->
+            <div class="space-y-1">
+                <div class="flex justify-between text-[10px] uppercase text-gray-500 font-bold tracking-widest">
+                    <span>Overtaking</span>
+                    <span class="text-blue-400">High</span>
+                </div>
+                <div class="w-full bg-neutral-800 h-1 rounded-full overflow-hidden">
+                    <div class="h-full bg-blue-500 w-[85%]"></div>
+                </div>
+            </div>
+
+            <div class="space-y-1">
+                <div class="flex justify-between text-[10px] uppercase text-gray-500 font-bold tracking-widest">
+                    <span>Downforce</span>
+                    <span class="text-yellow-400">Medium</span>
+                </div>
+                <div class="w-full bg-neutral-800 h-1 rounded-full overflow-hidden">
+                    <div class="h-full bg-yellow-500 w-[60%]"></div>
+                </div>
+            </div>
+
+            <div class="space-y-1">
+                <div class="flex justify-between text-[10px] uppercase text-gray-500 font-bold tracking-widest">
+                    <span>Tyre Stress</span>
+                    <span class="text-red-400">Severe</span>
+                </div>
+                <div class="w-full bg-neutral-800 h-1 rounded-full overflow-hidden">
+                    <div class="h-full bg-red-500 w-[90%]"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+    // Helper to get current driver ID for HTMX vals
+    function getCurrentDriver() {
+        return document.getElementById('profile-card').getAttribute('data-current-p');
+    }
+</script>
+
+<style>
+    @keyframes scan {
+        0% {
+            transform: translateY(-100%);
+        }
+
+        100% {
+            transform: translateY(200%);
+        }
+    }
+
+    .animate-scan {
+        animation: scan 3s linear infinite;
+    }
+</style>
+
+<style>
+    @keyframes shine {
+        from {
+            transform: translateX(-100%);
+        }
+
+        to {
+            transform: translateX(100%);
+        }
+    }
+
+    .animate-shine {
+        animation: shine 1s;
+    }
+
+    .clip-path-slant {
+        clip-path: polygon(0 0, 100% 0, 98% 100%, 0 100%);
+    }
+</style>
+
+<!-- Modal Container -->
+<div id="modal-container"></div>
+
+<!-- Data Injection -->
+<script>
+    window.driverData = window.driverData || {};
+    {% for driver in drivers %}
+    window.driverData['{{ driver.number }}'] = {
+        name: "{{ driver.name }}",
+        team: "{{ driver.team }}",
+        img: "{{ driver.img }}",
+        color: "{{ driver.color }}",
+        start: "{{ driver.start }}",
+        end: "{{ driver.end }}",
+        best: "{{ driver.best_lap }}",
+        avg: "{{ driver.avg_lap }}",
+        delta: {{ driver.end }} - {{ driver.start }}
+    };
+    {% endfor %}
+</script>
+
+<script>
+    var list = document.getElementById('driver-list');
+    if (list) autoAnimate(list);
+
+    function sortList(criteria) {
+        const items = Array.from(list.getElementsByClassName('driver-item'));
+        const btnGrid = document.getElementById('btn-grid');
+        const btnPred = document.getElementById('btn-pred');
+
+        // Reset Styles
+        const activeClass = "bg-white/10 text-white shadow-[0_0_10px_rgba(255,255,255,0.2)]";
+        const inactiveClass = "text-gray-400 hover:text-white";
+
+        if (criteria === 'grid') {
+            btnGrid.className = "px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-all " + activeClass;
+            btnPred.className = "px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-all " + inactiveClass;
+        } else {
+            btnPred.className = "px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-all " + activeClass;
+            btnGrid.className = "px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wider transition-all " + inactiveClass;
+        }
+
+        items.sort((a, b) => {
+            const valA = parseInt(a.getAttribute(`data-${criteria}`));
+            const valB = parseInt(b.getAttribute(`data-${criteria}`));
+            return valA - valB;
+        });
+
+        items.forEach((item, index) => {
+            list.appendChild(item);
+            const rankSpan = item.querySelector('.rank-display');
+            if (rankSpan) rankSpan.innerText = index + 1;
+        });
+    }
+
+    function showProfile(id) {
+        const data = window.driverData[id];
+        if (!data) return;
+
+        const card = document.getElementById('profile-card');
+        card.setAttribute('data-current-p', id);
+
+        const imgEl = document.getElementById('p-img');
+        const placeholderEl = document.getElementById('p-placeholder');
+
+        if (data.img) {
+            imgEl.src = data.img;
+            imgEl.classList.remove('hidden');
+            placeholderEl.classList.add('hidden');
+        } else {
+            imgEl.classList.add('hidden');
+            placeholderEl.classList.remove('hidden');
+        }
+        document.getElementById('p-name').innerText = data.name;
+        document.getElementById('p-team').innerText = data.team;
+
+        document.getElementById('p-glow-bg').className = `absolute top-0 inset-x-0 h-32 opacity-50 transition-colors duration-500`;
+        document.getElementById('p-glow-bg').style.background = `linear-gradient(to bottom, ${data.color}, transparent)`;
+
+        document.getElementById('p-strip').style.background = data.color;
+
+        document.getElementById('p-best').innerText = data.best;
+        document.getElementById('p-avg').innerText = data.avg;
+
+        // Bar Check
+        const delta = parseInt(data.start) - parseInt(data.end);
+        const deltaText = delta > 0 ? `+${delta}` : delta < 0 ? `${delta}` : "=";
+        document.getElementById('p-delta-txt').innerText = deltaText;
+        document.getElementById('p-delta-txt').style.color = delta > 0 ? "#4ade80" : delta < 0 ? "#f87171" : "white";
+
+        // Visualize bar (arbitrary scale)
+        const barW = Math.min(Math.abs(delta) * 10, 100);
+        document.getElementById('bar-pos').style.width = `${barW}%`;
+        document.getElementById('bar-pos').style.background = delta > 0 ? "#4ade80" : delta < 0 ? "#f87171" : "#555";
+    }
+</script>

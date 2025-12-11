@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pitwall Preditivo F1 - Next Gen</title>
+
+    <!-- TailwindCSS v3.4 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Auto Animate -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/auto-animate/0.8.1/index.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .glass {
+            background: rgba(26, 26, 26, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-neutral-950 text-white min-h-screen overflow-x-hidden">
+    <div
+        class="fixed inset-0 z-0 opacity-20 bg-[url('https://media.formula1.com/image/upload/f_auto,c_limit,w_1440,q_auto/f_auto/q_auto/content/dam/fom-website/manual/Misc/2021-Master-Folder/F1%202021%20WEBSITE%20HEADER%2016x9')] bg-cover bg-center">
+    </div>
+
+    <div class="relative z-10 container mx-auto px-4 py-4">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+
+</html>
